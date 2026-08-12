@@ -1,181 +1,88 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Abhi Ludo</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#06132e">
+<title>ABHI LUDO</title>
 <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-
-<div class="app">
-
-<header>
-    <div>
-        <h1>ABHI<span>LUDO</span></h1>
-        <p>Classic Ludo Game</p>
-    </div>
-
-    <button id="newGame">↻</button>
+<div id="app">
+<header class="top">
+  <div class="profile"><div class="avatar">A</div><div><strong>ABHI</strong><small id="levelText">LEVEL 1</small></div></div>
+  <div class="wallet"><span>💎 <b id="gems">50</b></span><span>🪙 <b id="coins">2550</b></span></div>
+  <button class="round" id="settingsBtn">⚙</button>
 </header>
 
-<div class="players">
+<section id="home" class="page">
+  <div class="brand">
+    <div class="crown">♛</div>
+    <h1>ABHI<span>LUDO</span></h1>
+    <p>THE CLASSIC LUDO EXPERIENCE</p>
+  </div>
+  <div class="feature-board" aria-hidden="true">
+    <div class="fb red"></div><div class="fb green"></div><div class="fb yellow"></div><div class="fb blue"></div><div class="fb-die">⚄</div>
+  </div>
+  <div class="menu-grid">
+    <button class="menu online" data-mode="online"><b>🌐 ONLINE</b><small>Local room ready</small></button>
+    <button class="menu" data-mode="computer"><b>🤖 COMPUTER</b><small>Play against AI</small></button>
+    <button class="menu" data-mode="local"><b>👥 PASS N PLAY</b><small>2–4 players</small></button>
+    <button class="menu" data-mode="friends"><b>❤️ FRIENDS</b><small>Local friends</small></button>
+  </div>
+  <div class="wide-actions"><button>🏆 TOURNAMENT</button><button>🎁 EVENTS</button></div>
+  <div class="home-foot"><button>🛍 SHOP</button><button>🎒 INVENTORY</button><button>💬 SOCIAL</button></div>
+</section>
 
-    <div class="player red active" id="player-red">
-        <div class="avatar">R</div>
-        <div>
-            <b>RED</b>
-            <small>Player 1</small>
-        </div>
-    </div>
+<section id="setup" class="page hidden">
+  <button class="back" id="backSetup">←</button>
+  <h2>SELECT GAME</h2>
+  <div class="game-tabs">
+    <button class="game-tab active" data-type="classic">👥 <b>CLASSIC</b><small>4 tokens</small></button>
+    <button class="game-tab" data-type="quick">⚡ <b>QUICK</b><small>Fast match</small></button>
+    <button class="game-tab" data-type="team">🤝 <b>TEAM UP</b><small>2 vs 2</small></button>
+  </div>
+  <h2 class="sub">PLAYERS</h2>
+  <div class="count-row"><button class="count active" data-count="2">2P</button><button class="count" data-count="3">3P</button><button class="count" data-count="4">4P</button></div>
+  <div id="playerEditor"></div>
+  <button class="primary" id="startGame">PLAY NOW <span>▶</span></button>
+</section>
 
-    <div class="turn">
-        <small>TURN</small>
-        <b id="turnName">RED</b>
-    </div>
+<section id="game" class="page hidden game-page">
+  <div class="gamebar"><button class="round" id="exitGame">⌂</button><div class="turn"><small>TURN</small><strong id="turnName">RED</strong></div><button class="round" id="soundBtn">🔊</button></div>
+  <div class="board-wrap"><div id="board" class="board">
+    <div class="zone z-red"><b>RED</b><div class="yard" id="yard-red"></div></div>
+    <div class="zone z-green"><b>GREEN</b><div class="yard" id="yard-green"></div></div>
+    <div class="zone z-yellow"><b>YELLOW</b><div class="yard" id="yard-yellow"></div></div>
+    <div class="zone z-blue"><b>BLUE</b><div class="yard" id="yard-blue"></div></div>
+    <div id="cells"></div>
+    <div id="lanes"></div>
+    <div class="center"><i class="c-red"></i><i class="c-green"></i><i class="c-yellow"></i><i class="c-blue"></i><b>★</b></div>
+    <div id="tokens"></div>
+  </div></div>
+  <div class="control">
+    <div class="dice-area"><button id="dice" class="dice">⚀</button><button id="roll" class="roll">🎲 ROLL DICE</button></div>
+    <p id="gameMsg">RED's turn — roll the dice</p>
+  </div>
+  <div class="scores">
+    <div><em class="sred"></em><small>RED</small><b id="score-red">0/4</b></div>
+    <div><em class="sgreen"></em><small>GREEN</small><b id="score-green">0/4</b></div>
+    <div><em class="syellow"></em><small>YELLOW</small><b id="score-yellow">0/4</b></div>
+    <div><em class="sblue"></em><small>BLUE</small><b id="score-blue">0/4</b></div>
+  </div>
+</section>
 
-    <div class="player green" id="player-green">
-        <div class="avatar">G</div>
-        <div>
-            <b>GREEN</b>
-            <small>Player 2</small>
-        </div>
-    </div>
+<nav id="nav"><button class="active">🏠<small>HOME</small></button><button>🏆<small>EVENT</small></button><button>🎒<small>INVENTORY</small></button><button>💬<small>SOCIAL</small></button></nav>
+<div id="toast"></div>
 
-    <div class="player yellow" id="player-yellow">
-        <div class="avatar">Y</div>
-        <div>
-            <b>YELLOW</b>
-            <small>Player 3</small>
-        </div>
-    </div>
-
-    <div class="player blue" id="player-blue">
-        <div class="avatar">B</div>
-        <div>
-            <b>BLUE</b>
-            <small>Player 4</small>
-        </div>
-    </div>
-
+<div class="modal hidden" id="settings">
+  <div class="modal-card"><button class="close" id="closeSettings">×</button><h2>SETTINGS</h2>
+    <label>Sound <input type="checkbox" id="sound" checked></label>
+    <label>Vibration <input type="checkbox" id="vibration" checked></label>
+    <button class="danger" id="resetData">RESET GAME DATA</button>
+  </div>
 </div>
-
-<main>
-
-<div id="board" class="board">
-
-    <!-- 15 x 15 board generated by JavaScript -->
-
-    <div class="home-area red-home">
-        <div class="home-title">RED</div>
-        <div class="home-slots">
-            <div class="slot"></div>
-            <div class="slot"></div>
-            <div class="slot"></div>
-            <div class="slot"></div>
-        </div>
-    </div>
-
-    <div class="home-area green-home">
-        <div class="home-title">GREEN</div>
-        <div class="home-slots">
-            <div class="slot"></div>
-            <div class="slot"></div>
-            <div class="slot"></div>
-            <div class="slot"></div>
-        </div>
-    </div>
-
-    <div class="home-area yellow-home">
-        <div class="home-title">YELLOW</div>
-        <div class="home-slots">
-            <div class="slot"></div>
-            <div class="slot"></div>
-            <div class="slot"></div>
-            <div class="slot"></div>
-        </div>
-    </div>
-
-    <div class="home-area blue-home">
-        <div class="home-title">BLUE</div>
-        <div class="home-slots">
-            <div class="slot"></div>
-            <div class="slot"></div>
-            <div class="slot"></div>
-            <div class="slot"></div>
-        </div>
-    </div>
-
-    <div class="center"></div>
-
-</div>
-
-<div class="game-panel">
-
-    <div class="dice-box">
-
-        <div id="dice" class="dice">6</div>
-
-        <button id="rollBtn">
-            🎲 ROLL DICE
-        </button>
-
-    </div>
-
-    <p id="message">
-        RED's turn — Roll the dice
-    </p>
-
-</div>
-
-</main>
-
-<div class="scores">
-
-    <div>
-        <span>RED</span>
-        <b id="score-red">0/4</b>
-    </div>
-
-    <div>
-        <span>GREEN</span>
-        <b id="score-green">0/4</b>
-    </div>
-
-    <div>
-        <span>YELLOW</span>
-        <b id="score-yellow">0/4</b>
-    </div>
-
-    <div>
-        <span>BLUE</span>
-        <b id="score-blue">0/4</b>
-    </div>
-
-</div>
-
-</div>
-
-<div id="winnerModal" class="modal hidden">
-
-    <div class="modal-card">
-
-        <div class="trophy">🏆</div>
-
-        <h2 id="winnerTitle">RED WINS!</h2>
-
-        <p>All four tokens reached home.</p>
-
-        <button id="playAgain">
-            PLAY AGAIN
-        </button>
-
-    </div>
-
-</div>
-
 <script src="game.js"></script>
-
+</div>
 </body>
 </html>
