@@ -1,249 +1,1107 @@
-const colors = ["red", "green", "yellow", "blue"];
+const COLORS = ["red", "green", "yellow", "blue"];
 
 let currentPlayer = 0;
-let diceValue = 6;
-let gameStarted = false;
-let soundEnabled = true;
+let diceValue = 0;
+let rolling = false;
+let gameOver = false;
 
-const scores = {
+/*
+    Main 52-cell Ludo track.
+
+    Coordinates are represented as:
+    [row, column]
+
+    Board is 15 x 15.
+*/
+
+const TRACK = [
+
+    [6,1],[6,2],[6,3],[6,4],[6,5],
+
+    [5,6],[4,6],[3,6],[2,6],[1,6],
+
+    [0,6],[0,7],[0,8],
+
+    [1,8],[2,8],[3,8],[4,8],[5,8],
+
+    [6,9],[6,10],[6,11],[6,12],[6,13],
+
+    [7,13],[8,13],
+
+    [8,12],[8,11],[8,10],[8,9],
+
+    [9,8],[10,8],[11,8],[12,8],[13,8],
+
+    [14,8],[14,7],[14,6],
+
+    [13,6],[12,6],[11,6],[10,6],[9,6],
+
+    [8,5],[8,4],[8,3],[8,2],[8,1],
+
+    [8,0],[7,0],[6,0]
+];
+
+/*
+    Starting position of every player
+*/
+
+const START = {
     red: 0,
-    green: 0,
-    yellow: 0,
-    blue: 0
+    green: 13,
+    yellow: 26,
+    blue: 39
 };
 
-const rollBtn = document.getElementById("rollBtn");
+/*
+    Safe positions
+*/
+
+const SAFE = [
+    0,
+    8,
+    13,
+    21,
+    26,
+    34,
+    39,
+    47
+];
+
+/*
+    Home lanes.
+
+    Each player gets 6 finishing cells.
+*/
+
+const HOME_PATH = {
+
+    red: [
+        [7,1],
+        [7,2],
+        [7,3],
+        [7,4],
+        [7,5],
+        [7,6]
+    ],
+
+    green: [
+        [1,7],
+        [2,7],
+        [3,7],
+        [4,7],
+        [5,7],
+        [6,7]
+    ],
+
+    yellow: [
+        [7,13],
+        [7,12],
+        [7,11],
+        [7,10],
+        [7,9],
+        [7,8]
+    ],
+
+    blue: [
+        [13,7],
+        [12,7],
+        [11,7],
+        [10,7],
+        [9,7],
+        [8,7]
+    ]
+};
+
+/*
+    Token state.
+
+    -1 = yard
+     0..51 = main track
+    52..57 = home lane
+    57 = finished
+*/
+
+const players = {
+
+    red: {
+        tokens: [-1,-1,-1,-1]
+    },
+
+    green: {
+        tokens: [-1,-1,-1,-1]
+    },
+
+    yellow: {
+        tokens: [-1,-1,-1,-1]
+    },
+
+    blue: {
+        tokens: [-1,-1,-1,-1]
+    }
+
+};
+
+/*
+    Yard positions.
+
+    These correspond to the four circles
+    inside each colored home.
+*/
+
+const YARD = {
+
+    red: [
+        [1,1],
+        [1,4],
+        [4,1],
+        [4,4]
+    ],
+
+    green: [
+        [1,10],
+        [1,13],
+        [4,10],
+        [4,13]
+    ],
+
+    yellow: [
+        [10,10],
+        [10,13],
+        [13,10],
+        [13,13]
+    ],
+
+    blue: [
+        [10,1],
+        [10,4],
+        [13,1],
+        [13,4]
+    ]
+
+};
+
+const board = document.getElementById("board");
 const dice = document.getElementById("dice");
-const diceNumber = document.getElementById("diceNumber");
+const rollBtn = document.getElementById("rollBtn");
 const message = document.getElementById("message");
-const turnText = document.getElementById("turnText");
+const turnName = document.getElementById("turnName");
 
-const winnerModal = document.getElementById("winnerModal");
-const winnerText = document.getElementById("winnerText");
+const winnerModal =
+    document.getElementById("winnerModal");
 
-const soundBtn = document.getElementById("soundBtn");
+const winnerTitle =
+    document.getElementById("winnerTitle");
+
+const playAgain =
+    document.getElementById("playAgain");
+
+const newGame =
+    document.getElementById("newGame");
+
+/* ----------------------------------
+   CREATE BOARD
+----------------------------------- */
+
+function createBoard() {
+
+    /*
+        Create all 225 cells.
+    */
+
+    for (let r = 0; r < 15; r++) {
+
+        for (let c = 0; c < 15; c++) {
+
+            const cell =
+                document.createElement("div");
+
+            cell.className = "cell";
+
+            cell.dataset.row = r;
+            cell.dataset.col = c;
+
+            /*
+                Only show actual playing path.
+            */
+
+            const trackIndex =
+                TRACK.findIndex(
+                    p => p[0] === r && p[1] === c
+                );
+
+            if (trackIndex !== -1) {
+
+                cell.dataset.track = trackIndex;
+
+                if (SAFE.includes(trackIndex)) {
+                    cell.classList.add("safe");
+                }
+
+                /*
+                    Color starting cells.
+                */
+
+                if (trackIndex === 0)
+                    cell.classList.add("red");
+
+                if (trackIndex === 13)
+                    cell.classList.add("green");
+
+                if (trackIndex === 26)
+                    cell.classList.add("yellow");
+
+                if (trackIndex === 39)
+                    cell.classList.add("blue");
+            }
+
+            /*
+                Home lanes
+            */
+
+            for (const color of COLORS) {
+
+                const path =
+                    HOME_PATH[color];
+
+                if (
+                    path.some(
+                        p => p[0] === r && p[1] === c
+                    )
+                ) {
+
+                    cell.classList.add(color);
+                }
+            }
+
+            board.appendChild(cell);
+        }
+    }
+
+    createTokens();
+}
+
+/* ----------------------------------
+   CREATE TOKENS
+----------------------------------- */
+
+function createTokens() {
+
+    COLORS.forEach(color => {
+
+        for (let i = 0; i < 4; i++) {
+
+            const token =
+                document.createElement("div");
+
+            token.className =
+                `token ${color}`;
+
+            token.dataset.color = color;
+            token.dataset.index = i;
+
+            token.addEventListener(
+                "click",
+                () => tokenClicked(color,i)
+            );
+
+            board.appendChild(token);
+        }
+    });
+
+    renderTokens();
+}
+
+/* ----------------------------------
+   FIND CELL
+----------------------------------- */
+
+function getCell(row,col) {
+
+    return document.querySelector(
+        `.cell[data-row="${row}"][data-col="${col}"]`
+    );
+}
+
+/* ----------------------------------
+   TOKEN POSITION
+----------------------------------- */
+
+function getTokenPosition(color,index) {
+
+    const state =
+        players[color].tokens[index];
+
+    /*
+        Token is inside yard.
+    */
+
+    if (state === -1) {
+
+        const pos =
+            YARD[color][index];
+
+        return {
+            row: pos[0],
+            col: pos[1]
+        };
+    }
+
+    /*
+        Token is on main track.
+    */
+
+    if (state < 52) {
+
+        const start =
+            START[color];
+
+        const absolute =
+            (start + state) % 52;
+
+        const pos =
+            TRACK[absolute];
+
+        return {
+            row: pos[0],
+            col: pos[1]
+        };
+    }
+
+    /*
+        Token is in home lane.
+    */
+
+    const homeIndex =
+        state - 52;
+
+    if (homeIndex >= 0 && homeIndex < 6) {
+
+        const pos =
+            HOME_PATH[color][homeIndex];
+
+        return {
+            row: pos[0],
+            col: pos[1]
+        };
+    }
+
+    /*
+        Finished token.
+    */
+
+    return null;
+}
+
+/* ----------------------------------
+   RENDER
+----------------------------------- */
+
+function renderTokens() {
+
+    COLORS.forEach(color => {
+
+        for (let i = 0; i < 4; i++) {
+
+            const token =
+                document.querySelector(
+                    `.token[data-color="${color}"][data-index="${i}"]`
+                );
+
+            const pos =
+                getTokenPosition(color,i);
+
+            if (!pos) {
+
+                token.style.display = "none";
+                continue;
+            }
+
+            token.style.display = "block";
+
+            token.style.left =
+                `${(pos.col / 15) * 100 + 1.4}%`;
+
+            token.style.top =
+                `${(pos.row / 15) * 100 + 1.4}%`;
+
+            /*
+                If multiple tokens are on same cell,
+                slightly offset them.
+            */
+
+            const stackOffset =
+                getStackOffset(color,i);
+
+            token.style.transform =
+                `translate(${stackOffset.x}px,${stackOffset.y}px)`;
+        }
+    });
+
+    updateScores();
+}
+
+/* ----------------------------------
+   STACK OFFSET
+----------------------------------- */
+
+function getStackOffset(color,index) {
+
+    const pos =
+        getTokenPosition(color,index);
+
+    if (!pos)
+        return {x:0,y:0};
+
+    let same = [];
+
+    COLORS.forEach(c => {
+
+        for (let i=0;i<4;i++) {
+
+            if (c === color && i === index)
+                continue;
+
+            const p =
+                getTokenPosition(c,i);
+
+            if (
+                p &&
+                p.row === pos.row &&
+                p.col === pos.col
+            ) {
+                same.push([c,i]);
+            }
+        }
+    });
+
+    const n = same.length;
+
+    if (n === 0)
+        return {x:0,y:0};
+
+    const offsets = [
+        [-6,-6],
+        [6,-6],
+        [-6,6],
+        [6,6]
+    ];
+
+    return offsets[n % offsets.length];
+}
+
+/* ----------------------------------
+   VALID MOVES
+----------------------------------- */
+
+function getValidMoves(color, dice) {
+
+    const moves = [];
+
+    players[color].tokens.forEach(
+        (state,index) => {
+
+            /*
+                Yard token requires 6.
+            */
+
+            if (state === -1) {
+
+                if (dice === 6)
+                    moves.push(index);
+
+                return;
+            }
+
+            /*
+                Already finished.
+            */
+
+            if (state === 57)
+                return;
+
+            /*
+                Cannot exceed finish.
+            */
+
+            if (state + dice <= 57) {
+
+                moves.push(index);
+            }
+        }
+    );
+
+    return moves;
+}
+
+/* ----------------------------------
+   ROLL DICE
+----------------------------------- */
+
+rollBtn.addEventListener(
+    "click",
+    rollDice
+);
 
 function rollDice() {
 
-    if (dice.classList.contains("rolling")) {
+    if (rolling || gameOver)
         return;
-    }
 
-    dice.classList.add("rolling");
+    rolling = true;
+
     rollBtn.disabled = true;
 
-    let counter = 0;
+    dice.classList.add("rolling");
 
-    const animation = setInterval(() => {
+    let count = 0;
 
-        diceNumber.textContent =
-            Math.floor(Math.random() * 6) + 1;
+    const animation =
+        setInterval(() => {
 
-        counter++;
+            dice.textContent =
+                Math.floor(Math.random()*6)+1;
 
-        if (counter >= 8) {
+            count++;
 
-            clearInterval(animation);
+            if (count >= 9) {
 
-            diceValue =
-                Math.floor(Math.random() * 6) + 1;
+                clearInterval(animation);
 
-            diceNumber.textContent = diceValue;
+                diceValue =
+                    Math.floor(Math.random()*6)+1;
 
-            dice.classList.remove("rolling");
+                dice.textContent =
+                    diceValue;
 
-            rollBtn.disabled = false;
+                dice.classList.remove("rolling");
 
-            handleDiceResult();
-        }
+                rolling = false;
 
-    }, 70);
+                processRoll();
+            }
+
+        },60);
 }
 
-function handleDiceResult() {
+/* ----------------------------------
+   PROCESS ROLL
+----------------------------------- */
 
-    const color = colors[currentPlayer];
+function processRoll() {
 
-    message.textContent =
-        `${color.toUpperCase()} rolled ${diceValue}`;
+    const color =
+        COLORS[currentPlayer];
 
-    if (diceValue === 6) {
+    const validMoves =
+        getValidMoves(color,diceValue);
+
+    /*
+        No valid move.
+    */
+
+    if (validMoves.length === 0) {
 
         message.textContent =
-            `${color.toUpperCase()} got a 6! Roll again or move a token.`;
+            `${color.toUpperCase()} cannot move.`;
 
-        activateTokens(color);
+        setTimeout(() => {
+
+            if (diceValue === 6) {
+
+                message.textContent =
+                    `${color.toUpperCase()} gets another turn.`;
+
+                rollBtn.disabled = false;
+
+            } else {
+
+                nextTurn();
+            }
+
+        },800);
 
         return;
     }
 
-    moveRandomToken(color);
+    /*
+        Highlight valid tokens.
+    */
 
-    setTimeout(() => {
+    clearMovable();
 
-        currentPlayer++;
+    validMoves.forEach(index => {
 
-        if (currentPlayer >= colors.length) {
-            currentPlayer = 0;
-        }
-
-        updateTurn();
-
-    }, 700);
-}
-
-function activateTokens(color) {
-
-    const tokens =
-        document.querySelectorAll(`.${color}-token`);
-
-    tokens.forEach(token => {
-
-        token.classList.add("selectable");
-
-        token.onclick = () => {
-
-            moveToken(token, color);
-
-            tokens.forEach(t =>
-                t.classList.remove("selectable")
+        const token =
+            document.querySelector(
+                `.token[data-color="${color}"][data-index="${index}"]`
             );
 
-            tokens.forEach(t =>
-                t.onclick = null
-            );
-
-            setTimeout(() => {
-                updateTurn();
-            }, 700);
-        };
+        token.classList.add("movable");
     });
+
+    /*
+        Automatic move if only one token.
+    */
+
+    if (validMoves.length === 1) {
+
+        setTimeout(() => {
+
+            moveToken(
+                color,
+                validMoves[0]
+            );
+
+        },350);
+
+        return;
+    }
+
+    message.textContent =
+        `${color.toUpperCase()} — choose a token`;
 }
 
-function moveRandomToken(color) {
+/* ----------------------------------
+   TOKEN CLICK
+----------------------------------- */
 
-    const tokens =
-        Array.from(
-            document.querySelectorAll(`.${color}-token`)
-        );
+function tokenClicked(color,index) {
 
-    const token =
-        tokens[Math.floor(Math.random() * tokens.length)];
+    if (gameOver)
+        return;
 
-    moveToken(token, color);
+    if (
+        color !== COLORS[currentPlayer]
+    )
+        return;
+
+    const valid =
+        getValidMoves(color,diceValue);
+
+    if (!valid.includes(index))
+        return;
+
+    moveToken(color,index);
 }
 
-function moveToken(token, color) {
+/* ----------------------------------
+   MOVE TOKEN
+----------------------------------- */
 
-    token.style.transform =
-        "translateY(-10px) scale(1.2)";
+function moveToken(color,index) {
 
-    setTimeout(() => {
+    clearMovable();
 
-        token.style.transform =
-            "translateY(0) scale(1)";
+    const oldState =
+        players[color].tokens[index];
 
-        scores[color]++;
+    let newState;
 
-        updateScore(color);
+    /*
+        Token coming out of yard.
+    */
+
+    if (oldState === -1) {
+
+        newState = 0;
+
+    } else {
+
+        newState =
+            oldState + diceValue;
+    }
+
+    /*
+        Animate step-by-step.
+    */
+
+    animateMovement(
+        color,
+        index,
+        oldState,
+        newState
+    );
+}
+
+/* ----------------------------------
+   ANIMATE
+----------------------------------- */
+
+function animateMovement(
+    color,
+    index,
+    from,
+    to
+) {
+
+    let current = from;
+
+    /*
+        Yard -> starting position.
+    */
+
+    if (current === -1) {
+
+        players[color].tokens[index] = 0;
+
+        renderTokens();
+
+        setTimeout(() => {
+
+            finishMove(color,index);
+
+        },180);
+
+        return;
+    }
+
+    const interval =
+        setInterval(() => {
+
+            current++;
+
+            players[color].tokens[index] =
+                current;
+
+            renderTokens();
+
+            if (current >= to) {
+
+                clearInterval(interval);
+
+                setTimeout(() => {
+
+                    finishMove(
+                        color,
+                        index
+                    );
+
+                },150);
+            }
+
+        },120);
+}
+
+/* ----------------------------------
+   FINISH MOVE
+----------------------------------- */
+
+function finishMove(color,index) {
+
+    const state =
+        players[color].tokens[index];
+
+    /*
+        Finished.
+    */
+
+    if (state === 57) {
+
+        message.textContent =
+            `${color.toUpperCase()} token reached HOME!`;
 
         checkWinner(color);
 
-    }, 350);
-}
+        if (gameOver)
+            return;
 
-function updateScore(color) {
+        extraTurn();
+        return;
+    }
 
-    const scoreElement =
-        document.getElementById(`${color}Score`);
+    /*
+        Check capture.
+    */
 
-    scoreElement.textContent =
-        scores[color];
-}
-
-function updateTurn() {
-
-    const color = colors[currentPlayer];
-
-    turnText.textContent =
-        color.toUpperCase();
-
-    message.textContent =
-        `${color.toUpperCase()}'s turn — Roll the dice`;
-
-    document
-        .querySelectorAll(".player-card")
-        .forEach(card =>
-            card.classList.remove("active")
+    const captured =
+        captureOpponents(
+            color,
+            index
         );
 
-    const playerCard =
-        document.getElementById(`${color}Player`);
+    /*
+        Check if all tokens home.
+    */
 
-    if (playerCard) {
-        playerCard.classList.add("active");
+    if (checkWinner(color))
+        return;
+
+    /*
+        Six = extra turn
+    */
+
+    if (diceValue === 6) {
+
+        extraTurn();
+        return;
     }
+
+    /*
+        Capture = extra turn
+    */
+
+    if (captured) {
+
+        message.textContent =
+            `${color.toUpperCase()} captured a token!`;
+
+        extraTurn();
+        return;
+    }
+
+    /*
+        Normal turn.
+    */
+
+    nextTurn();
+}
+
+/* ----------------------------------
+   CAPTURE
+----------------------------------- */
+
+function captureOpponents(color,index) {
+
+    const state =
+        players[color].tokens[index];
+
+    /*
+        Cannot capture from home lane.
+    */
+
+    if (state >= 52)
+        return false;
+
+    const absolute =
+        (
+            START[color] + state
+        ) % 52;
+
+    /*
+        Safe cells cannot be captured.
+    */
+
+    if (SAFE.includes(absolute))
+        return false;
+
+    let captured = false;
+
+    COLORS.forEach(opponent => {
+
+        if (opponent === color)
+            return;
+
+        players[opponent].tokens.forEach(
+            (oppState,oppIndex) => {
+
+                if (
+                    oppState >= 0 &&
+                    oppState < 52
+                ) {
+
+                    const oppAbsolute =
+                        (
+                            START[opponent] +
+                            oppState
+                        ) % 52;
+
+                    if (
+                        oppAbsolute === absolute
+                    ) {
+
+                        /*
+                            Send opponent home.
+                        */
+
+                        players[opponent]
+                            .tokens[oppIndex] = -1;
+
+                        captured = true;
+                    }
+                }
+            }
+        );
+    });
+
+    renderTokens();
+
+    return captured;
+}
+
+/* ----------------------------------
+   EXTRA TURN
+----------------------------------- */
+
+function extraTurn() {
+
+    const color =
+        COLORS[currentPlayer];
+
+    message.textContent =
+        `${color.toUpperCase()} gets another turn!`;
 
     rollBtn.disabled = false;
 }
 
-function checkWinner(color) {
+/* ----------------------------------
+   NEXT TURN
+----------------------------------- */
 
-    if (scores[color] >= 20) {
+function nextTurn() {
 
-        winnerText.textContent =
-            `${color.toUpperCase()} WINS!`;
+    currentPlayer++;
 
-        winnerModal.classList.remove("hidden");
-
-        rollBtn.disabled = true;
+    if (
+        currentPlayer >= COLORS.length
+    ) {
+        currentPlayer = 0;
     }
+
+    updateTurn();
+
+    rollBtn.disabled = false;
 }
 
-function newGame() {
+/* ----------------------------------
+   UPDATE TURN
+----------------------------------- */
 
-    currentPlayer = 0;
+function updateTurn() {
 
-    Object.keys(scores).forEach(color => {
-        scores[color] = 0;
-        updateScore(color);
-    });
+    const color =
+        COLORS[currentPlayer];
+
+    turnName.textContent =
+        color.toUpperCase();
+
+    document
+        .querySelectorAll(".player")
+        .forEach(p =>
+            p.classList.remove("active")
+        );
+
+    const active =
+        document.getElementById(
+            `player-${color}`
+        );
+
+    if (active)
+        active.classList.add("active");
+
+    message.textContent =
+        `${color.toUpperCase()}'s turn — Roll the dice`;
+
+    clearMovable();
+}
+
+/* ----------------------------------
+   CLEAR MOVABLE
+----------------------------------- */
+
+function clearMovable() {
 
     document
         .querySelectorAll(".token")
-        .forEach(token => {
+        .forEach(token =>
+            token.classList.remove("movable")
+        );
+}
 
-            token.style.transform =
-                "translateY(0) scale(1)";
+/* ----------------------------------
+   WINNER
+----------------------------------- */
 
-            token.classList.remove("selectable");
+function checkWinner(color) {
 
-            token.onclick = null;
-        });
+    const finished =
+        players[color].tokens
+            .filter(x => x === 57)
+            .length;
 
-    diceNumber.textContent = "6";
+    if (finished !== 4)
+        return false;
+
+    gameOver = true;
+
+    winnerTitle.textContent =
+        `${color.toUpperCase()} WINS!`;
+
+    winnerModal.classList.remove("hidden");
+
+    rollBtn.disabled = true;
+
+    return true;
+}
+
+/* ----------------------------------
+   SCORES
+----------------------------------- */
+
+function updateScores() {
+
+    COLORS.forEach(color => {
+
+        const finished =
+            players[color].tokens
+                .filter(x => x === 57)
+                .length;
+
+        const score =
+            document.getElementById(
+                `score-${color}`
+            );
+
+        if (score)
+            score.textContent =
+                `${finished}/4`;
+    });
+}
+
+/* ----------------------------------
+   NEW GAME
+----------------------------------- */
+
+function resetGame() {
+
+    COLORS.forEach(color => {
+
+        players[color].tokens =
+            [-1,-1,-1,-1];
+    });
+
+    currentPlayer = 0;
+
+    diceValue = 0;
+
+    gameOver = false;
+
+    rolling = false;
+
+    dice.textContent = "6";
 
     winnerModal.classList.add("hidden");
+
+    rollBtn.disabled = false;
+
+    renderTokens();
 
     updateTurn();
 }
 
-soundBtn.addEventListener("click", () => {
+newGame.addEventListener(
+    "click",
+    resetGame
+);
 
-    soundEnabled = !soundEnabled;
+playAgain.addEventListener(
+    "click",
+    resetGame
+);
 
-    soundBtn.textContent =
-        soundEnabled ? "🔊" : "🔇";
-});
+/* ----------------------------------
+   START
+----------------------------------- */
 
-rollBtn.addEventListener("click", rollDice);
-
-document
-    .getElementById("newGameBtn")
-    .addEventListener("click", newGame);
-
-document
-    .getElementById("playAgain")
-    .addEventListener("click", newGame);
+createBoard();
 
 updateTurn();
