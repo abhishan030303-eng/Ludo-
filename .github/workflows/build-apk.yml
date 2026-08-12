@@ -3,13 +3,15 @@ name: Build ABHI LUDO APK
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
   android:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -17,7 +19,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
       - name: Install dependencies
         run: npm install
@@ -26,15 +27,17 @@ jobs:
         run: |
           rm -rf www
           mkdir www
-          cp index.html style.css game.js www/
+          cp index.html www/
+          cp style.css www/
+          cp game.js www/
 
-      - name: Add Android
+      - name: Add Android platform
         run: npx cap add android
 
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Build APK
+      - name: Build Debug APK
         working-directory: android
         run: ./gradlew assembleDebug
 
