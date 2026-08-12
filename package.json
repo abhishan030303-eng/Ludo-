@@ -1,0 +1,8 @@
+{
+  "name":"abhi-ludo",
+  "version":"1.0.0",
+  "private":true,
+  "scripts":{"android":"cap sync android"},
+  "dependencies":{"@capacitor/core":"^7.4.2","@capacitor/android":"^7.4.2"},
+  "devDependencies":{"@capacitor/cli":"^7.4.2"}
+}
